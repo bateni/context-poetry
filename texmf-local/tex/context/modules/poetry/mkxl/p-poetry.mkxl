@@ -37,29 +37,27 @@
   ]
 
 \appendtoks
-%    \setuxvalue{\e!start\currentpoetry}{\startpoetry[\currentpoetry]}%
-    \setuxvalue{\e!start\currentpoetry}{\dopoetry[\currentpoetry]}%
+    \setuxvalue{\e!start\currentpoetry}{\startpoetry[\currentpoetry]}%
     \setuxvalue{\e!stop \currentpoetry}{\stoppoetry}%
 \to \everydefinepoetry
 
-\unexpanded\def\startpoetry
-  {\dosingleempty\dopoetry}
-
-\unexpanded\def\dopoetry
-  {\dodopoetry[\empty]}
-
-%\permanent\tolerant\protected\def\dostartpoetry[#1]#*[#2]%
-\unexpanded\def\dodopoetry[#1][#2]%#3#4%
+\tolerant\protected\def\startpoetry[#1]#*[#2]%
   {%\dontleavehmode
-   \par
    \begingroup
-   ---#1--\\---#2--\\
-   \def\currentpoetry{#1}
-   \doifelseassignment{#2}
-     {\edef\currentpoetry{#1}%
-      \setupcurrentpoetry[#2]}
-     {\def\currentpoetry{#2}}%
+   \ifarguments
+     \def\currentpoetry{}%
+   \or
+     \doifelseassignment{#1}
+       {\edef\currentpoetry{}%
+        \setupcurrentpoetry[#1]}
+       {\def\currentpoetry{#1}}%
+   \else
+     \edef\currentpoetry{#1}%
+     \setupcurrentpoetry[#2]%
+   \fi%
+   \usepoetrystyleandcolor\c!style\c!color
    \poetryparameter\c!before%
+   \par
    %% todo: change to sth other than scratchwidth
    %% todo: location (middle, etc.)
    \doifelse{\poetryparameter\c!width}\v!local
@@ -70,7 +68,6 @@
    \ifdim\scratchwidth<\availablehsize
      \advance\rightskip by\dimexpr\availablehsize-\scratchwidth\relax
    \fi
-   \usepoetrystyleandcolor\c!style\c!color
    %% todo: move up and rename
    \newbox\firstcoupletbox%
    \newdimen\compboxwidth%
