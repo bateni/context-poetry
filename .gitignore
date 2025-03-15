@@ -1,0 +1,19 @@
+# swap files
+*.*.swp
+*~
+\#*\#
+
+# ConTeXt tmp files
+*.log
+*.tui
+*.tuc
+*.top
+*.tmp
+mpgraph.mp
+*-mpgraph.mp
+
+# Output files
+*.pdf
+
+# Upload files
+*.zip
