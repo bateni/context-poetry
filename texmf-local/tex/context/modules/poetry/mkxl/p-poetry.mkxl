@@ -1,0 +1,94 @@
+%D \module
+%D   [      file=p-poetry,
+%D        version=0.1,
+%D          title=\CONTEXT\ User Module,
+%D       subtitle=typeset Persian poetry,
+%D         author={Mohammad Hossein Bateni},
+%D           date=\currentdate,
+%D      copyright={Mohammad Hossein Bateni},
+%D        license=MIT License]
+
+% Poetry: Typesetting Persian poetry in ConTeXt
+% Copyright (C) 2025  Mohammad Hossein Bateni
+
+\writestatus{loading}{Loading poetry module}
+
+\unprotect
+
+\installnamespace{poetry}
+\installcommandhandler \????poetry {poetry} \????poetry
+
+\installnamespace{poetryline}
+\installcommandhandler \????poetryline {poetryline} \????poetryline
+
+\definedataset[PoetryLines]
+\newcount\poetrycount  % todo: change to ??....
+\poetrycount\zerocount
+
+\setuppoetry
+  [\c!width=\v!local, % broad [full text width], fit?, DIM
+   \c!distance=4\emwidth,  
+   \c!location=\v!left, % middle, right 
+   %%%%\c!separator=\vl\hskip.25em\vl,
+   \c!strut=,  %% not implemented
+   \c!after=\blank[line], % comes after \par
+   %style=
+   %color=
+  ]
+
+\appendtoks
+%    \setuxvalue{\e!start\currentpoetry}{\startpoetry[\currentpoetry]}%
+    \setuxvalue{\e!start\currentpoetry}{\dopoetry[\currentpoetry]}%
+    \setuxvalue{\e!stop \currentpoetry}{\stoppoetry}%
+\to \everydefinepoetry
+
+\unexpanded\def\startpoetry
+  {\dosingleempty\dopoetry}
+
+\unexpanded\def\dopoetry
+  {\dodopoetry[\empty]}
+
+%\permanent\tolerant\protected\def\dostartpoetry[#1]#*[#2]%
+\unexpanded\def\dodopoetry[#1][#2]%#3#4%
+  {%\dontleavehmode
+   \par
+   \begingroup
+   ---#1--\\---#2--\\
+   \def\currentpoetry{#1}
+   \doifelseassignment{#2}
+     {\edef\currentpoetry{#1}%
+      \setupcurrentpoetry[#2]}
+     {\def\currentpoetry{#2}}%
+   \poetryparameter\c!before%
+   %% todo: change to sth other than scratchwidth
+   %% todo: location (middle, etc.)
+   \doifelse{\poetryparameter\c!width}\v!local
+             {\scratchwidth\availablehsize}
+             {\doifelse{\poetryparameter\c!width}\v!broad
+             {\scratchwidth\hsize}
+             {\scratchwidth\poetryparameter\c!width\relax}}%
+   \ifdim\scratchwidth<\availablehsize
+     \advance\rightskip by\dimexpr\availablehsize-\scratchwidth\relax
+   \fi
+   \usepoetrystyleandcolor\c!style\c!color
+   %% todo: move up and rename
+   \newbox\firstcoupletbox%
+   \newdimen\compboxwidth%
+   \newdimen\fullboxwidth%
+   %% todo: read setup parameters?
+  }
+
+\permanent\protected\def\stoppoetry
+  {%
+   \poetry_compute_width%
+   %\par%
+   \blank[back]%
+   \poetryparameter\c!after%
+   %\par
+   \endgroup%
+  }
+
+  
+\def\poetry_compute_width{}
+  
+\protect
