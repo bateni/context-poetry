@@ -120,7 +120,21 @@
      \edef\currentpoetryline{#1}%
      \setupcurrentpoetryline[#2]%
    \fi%
-   \dontleavehmode%  
+   %% Figure distance and separator settings
+   \edef\poetry_intra_line_distance{\poetrylineparameter\c!distance}%
+   \ifempty\poetry_intra_line_distance%
+   \edef\poetry_intra_line_distance{\poetryparameter\c!distance}%
+   \fi%
+   \ifempty\poetry_intra_line_distance\else%
+   \edef\poetry_intra_line_distance{\poetryparameter\c!distance}%
+   \fi%
+   %%
+   \edef\poetry_intra_line_separator{\poetrylineparameter\c!separator}%
+   \ifempty\poetry_intra_line_separator%
+   \edef\poetry_intra_line_separator{\poetryparameter\c!separator}%
+   \fi%
+   %%
+   \dontleavehmode%
    \usepoetrylinestyleandcolor\c!style\c!color%
    \poetrylineparameter\c!before%
    %%
@@ -161,7 +175,11 @@
     \check_poetry_line{1}{#1}%
     \edef\group_width_left{\group_width}%
     \box\poetry_line_box%
-    \hfil%
+    %\hfil%
+    \doiftextelse{\poetry_intra_line_separator}
+      {\hbox to \poetry_intra_line_distance{\poetry_intra_line_separator}}
+      {\hskip\poetry_intra_line_distance}
+    %    
     \check_poetry_line{1}{#2}%
     \box\poetry_line_box%
     \poetrylineparameter\c!after%
