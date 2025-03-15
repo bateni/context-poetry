@@ -85,7 +85,73 @@
    \endgroup%
   }
 
+%D Next we define the command for adding one line of poetry, which may
+%D consist of one or two pieces.
+
+\installnamespace{poetryline}
+\installcommandhandler \????poetryline {poetryline} \????poetryline
+
+\setuppoetryline
+  [\c!coupling=\v!default, % or NUM, or NUM:NUM?
+   %\c!coupling:1=,
+   %\c!coupling:2=,
+   \c!alternative=\v!auto, % stacked, line, step or staggered?, middle, left, right
+   \c!n=2, % = couplet, or 1 = hemistich
+   \c!separator=,  % {\hss - \hss}
+   \c!distance=,
+   %\c!distance=1cm, % between two hemistichs
+   \c!after=\blank[standard], % or nothing?
+   %style=
+   %color=
+  ]
+
+\appendtoks
+  \setuxvalue{\currentpoetryline}{\poetryline[\currentpoetryline]}
+\to \everydefinepoetryline
   
-\def\poetry_compute_width{}
+\tolerant\protected\def\poetryline[#1]#*[#2]%
+  {%
+   \begingroup%
+   \ifarguments
+     \def\currentpoetryline{}%
+   \or
+     \doifelseassignment{#1}
+       {\edef\currentpoetryline{}%
+        \setupcurrentpoetryline[#1]}
+       {\def\currentpoetryline{#1}}%
+   \else
+     \edef\currentpoetryline{#1}%
+     \setupcurrentpoetryline[#2]%
+   \fi%
+   \dontleavehmode%  
+   \usepoetrylinestyleandcolor\c!style\c!color%
+   \poetrylineparameter\c!before%
+   %%
+   \doifelse{\poetrylineparameter\c!n}{2}
+            {\couplet}
+            {\singlet}%
+  }
+
+\protected\def\singlet#1#2%
+  {%
+    \dontleavehmode%
+    3:#1
+    \endgroup
+  }
+
+\protected\def\couplet#1#2%
+  {%
+    \dontleavehmode%
+    1:#1;;;;2:#2
+    \endgroup
+  }
+  
+%%
+\def\groupwidth#1{%
+  \xdef\group_width{5cm}%     
+}
+
+
+\def\poetry_compute_width{}  %% todo
   
 \protect
