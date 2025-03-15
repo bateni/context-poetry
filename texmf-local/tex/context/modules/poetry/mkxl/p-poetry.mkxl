@@ -18,12 +18,14 @@
 \installnamespace{poetry}
 \installcommandhandler \????poetry {poetry} \????poetry
 
-\installnamespace{poetryline}
-\installcommandhandler \????poetryline {poetryline} \????poetryline
-
 \definedataset[PoetryLines]
-\newcount\poetrycount  % todo: change to ??....
-\poetrycount\zerocount
+
+\newcount\poetry_count
+\poetry_count\zerocount
+
+\newbox\poetry_line_box%
+\newdimen\computed_box_width%
+\newdimen\natural_box_width%
 
 \setuppoetry
   [\c!width=\v!local, % broad [full text width], fit?, DIM
@@ -68,11 +70,6 @@
    \ifdim\scratchwidth<\availablehsize
      \advance\rightskip by\dimexpr\availablehsize-\scratchwidth\relax
    \fi
-   %% todo: move up and rename
-   \newbox\firstcoupletbox%
-   \newdimen\compboxwidth%
-   \newdimen\fullboxwidth%
-   %% todo: read setup parameters?
   }
 
 \permanent\protected\def\stoppoetry
@@ -132,17 +129,42 @@
             {\singlet}%
   }
 
+\protected\def\check_poetry_line#1#2%
+  {% #1: group, #2: content
+    \groupwidth{#1}%
+    \computed_box_width=\group_width%
+    \setbox\poetry_line_box\hbox{#2}%
+    \natural_box_width=\wd\poetry_line_box%
+    \ifdim\natural_box_width<\computed_box_width\relax%
+      \setbox\poetry_line_box\hbox to \computed_box_width{\unhbox\poetry_line_box}%
+    \fi%
+    \setdataset[PoetryLines]
+               [t=\the\poetry_count:#1,w=\the\natural_box_width]%
+  } %% end of check_poetry_line
+
 \protected\def\singlet#1#2%
   {%
     \dontleavehmode%
-    3:#1
+    \check_poetry_line{1}{#1}%
+    %
+    \hfil%
+    \box\poetry_line_box%
+    \hfil%
+    %
+    \poetrylineparameter\c!after%
     \endgroup
-  }
+  } %% end of singlet
 
 \protected\def\couplet#1#2%
   {%
     \dontleavehmode%
-    1:#1;;;;2:#2
+    \check_poetry_line{1}{#1}%
+    \edef\group_width_left{\group_width}%
+    \box\poetry_line_box%
+    \hfil%
+    \check_poetry_line{1}{#2}%
+    \box\poetry_line_box%
+    \poetrylineparameter\c!after%
     \endgroup
   }
   
