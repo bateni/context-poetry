@@ -6,6 +6,7 @@
 # ConTeXt tmp files
 *.log
 *.tui
+*.tua
 *.tuc
 *.top
 *.tmp
