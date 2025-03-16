@@ -27,6 +27,8 @@
 \newdimen\computed_box_width%
 \newdimen\natural_box_width%
 
+% todo: add system variables for new keys, values if needed.
+
 \setuppoetry
   [\c!width=\v!local, % broad [full text width], fit?, DIM
    \c!distance=4\emwidth,  
@@ -44,7 +46,7 @@
 \to \everydefinepoetry
 
 \tolerant\protected\def\startpoetry[#1]#*[#2]%
-  {%\dontleavehmode
+  {%
    \begingroup
    \ifarguments
      \def\currentpoetry{}%
@@ -59,17 +61,17 @@
    \fi%
    \usepoetrystyleandcolor\c!style\c!color
    \poetryparameter\c!before%
-   \par
+   \par%
    %% todo: change to sth other than scratchwidth
    %% todo: location (middle, etc.)
-   \doifelse{\poetryparameter\c!width}\v!local
+   \doifelse{\poetryparameter\c!width}{\v!local}
              {\scratchwidth\availablehsize}
-             {\doifelse{\poetryparameter\c!width}\v!broad
+             {\doifelse{\poetryparameter\c!width}{\v!broad}
              {\scratchwidth\hsize}
              {\scratchwidth\poetryparameter\c!width\relax}}%
-   \ifdim\scratchwidth<\availablehsize
-     \advance\rightskip by\dimexpr\availablehsize-\scratchwidth\relax
-   \fi
+   \ifdim\scratchwidth<\availablehsize\relax
+     \advance\rightskip by\dimexpr\availablehsize-\scratchwidth\relax%
+   \fi%
   }
 
 \permanent\protected\def\stoppoetry
@@ -135,7 +137,7 @@
    \edef\poetry_intra_line_separator{\poetryparameter\c!separator}%
    \fi%
    %%
-   \dontleavehmode%
+   \par%
    \usepoetrylinestyleandcolor\c!style\c!color%
    \poetrylineparameter\c!before%
    %%
@@ -159,11 +161,16 @@
   {%
     \dontleavehmode%
     \check_poetry_line{1}{#1}%
-    %
-    \hfil%
-    \box\poetry_line_box%
-    \hfil%
-    %
+    % only left and right matter. everything else is treated as middle
+    \edef\actual_alternative{\poetrylineparameter\c!alternative}%
+    \hbox to \scratchwidth{%
+      \doifnot{\actual_alternative}{\v!left}
+              {\hfil}%
+      \box\poetry_line_box%
+      \doifnot{\actual_alternative}{\v!right}
+              {\hfil}%
+    }
+    \par%
     \poetrylineparameter\c!after%
     \endgroup
   } %% end of singlet
@@ -174,7 +181,7 @@
     \check_poetry_line{1}{#1}%
     \edef\group_width_left{\group_width}%
     \box\poetry_line_box%
-    %\hfil%
+    %
     \doiftextelse{\poetry_intra_line_separator}
       {\hbox to \poetry_intra_line_distance{\poetry_intra_line_separator}}
       {\hskip\poetry_intra_line_distance}
