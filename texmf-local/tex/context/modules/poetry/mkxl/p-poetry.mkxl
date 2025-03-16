@@ -74,7 +74,7 @@
 
 \permanent\protected\def\stoppoetry
   {%
-   \poetry_compute_width%
+   \poetry_save_computed_widths%
    %\par%
    \blank[back]%
    \poetryparameter\c!after%
@@ -97,6 +97,7 @@
    \c!separator=,  % {\hss - \hss}
    \c!distance=,
    %\c!distance=1cm, % between two hemistichs
+   \c!before=\blank[standard], % or nothing?
    \c!after=\blank[standard], % or nothing?
    %style=
    %color=
@@ -145,15 +146,13 @@
 
 \protected\def\check_poetry_line#1#2%
   {% #1: group, #2: content
-    \groupwidth{#1}%
-    \computed_box_width=\group_width%
     \setbox\poetry_line_box\hbox{#2}%
     \natural_box_width=\wd\poetry_line_box%
+    \lookup_and_update_group_width{#1}{\the\natural_box_width}%
+    \computed_box_width=\group_width\relax%
     \ifdim\natural_box_width<\computed_box_width\relax%
-      \setbox\poetry_line_box\hbox to \computed_box_width{\unhbox\poetry_line_box}%
+       \setbox\poetry_line_box\hbox to \computed_box_width{\unhbox\poetry_line_box}%
     \fi%
-    \setdataset[PoetryLines]
-               [t=\the\poetry_count:#1,w=\the\natural_box_width]%
   } %% end of check_poetry_line
 
 \protected\def\singlet#1#2%
@@ -186,12 +185,51 @@
     \endgroup
   }
   
-%%
-\def\groupwidth#1{%
-  \xdef\group_width{5cm}%     
-}
+\def\lookup_and_update_group_width#1#2%
+  {% #1: group id,  #2: natural width
+    \def\group_width{\ctxlua{poetryLookupAndUpdateGroupWidth("\the\poetry_count","#1","#2")}}%
+  }
 
+\def\poetry_save_computed_widths%
+  {%
+    \ctxlua{poetrySaveComputedWidths(\the\poetry_count)}%
+    \global\advance\poetry_count\plusone\relax%
+  }
+  
+\startluacode
+  thirddata           = thirddata           or {}
+  thirddata.poetry    = thirddata.poetry    or {}
+  
+  local poetry        = thirddata.poetry
+  poetry.widths       = {}
 
-\def\poetry_compute_width{}  %% todo
+  function poetryLookupAndUpdateGroupWidth(instance_id, group_id, natural_width)
+    instance_id = tostring(instance_id)
+    group_id    = tostring(group_id)
+  
+    local looked_up_width = context.datasetvariable("PoetryLines", 'x' .. instance_id, 'y' .. group_id) or 0
+
+    local instance = poetry.widths[instance_id] or {}
+    poetry.widths[instance_id] = instance
+    local width = instance[group_id] or 0
+
+    natural_width = tonumber(natural_width:match('[.%d]+'))
+    if natural_width > width then
+      width = natural_width
+    end
+    instance[group_id] = width
+    context(looked_up_width .. 'pt')
+  end
+
+  function poetrySaveComputedWidths(instance_id)
+    instance_id = tostring(instance_id)
+    local instance = poetry.widths[instance_id]
+    for k, v in pairs(instance) do
+      local kv = 'y' .. k .. "=" .. v
+      context.setdataset({"PoetryLines"}, {'x' .. instance_id}, {kv})
+    end
+  end  
+\stopluacode
+
   
 \protect
