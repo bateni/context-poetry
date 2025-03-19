@@ -92,8 +92,8 @@
 
 \setuppoetryline
   [\c!coupling=\v!default, % or NUM, or NUM:NUM?
-   %\c!coupling:1=,
-   %\c!coupling:2=,
+   %\c!coupling\c!left=,
+   %\c!coupling\c!right=,
    \c!alternative=\v!auto, % stacked, line, step or staggered?, middle, left, right
    \c!n=2, % = couplet, or 1 = hemistich
    \c!separator=,  % {\hss - \hss}
@@ -136,7 +136,14 @@
    \ifempty\poetry_intra_line_separator%
    \edef\poetry_intra_line_separator{\poetryparameter\c!separator}%
    \fi%
-   %%
+   %% Figure out coupling of (half) lines
+   \edef\poetry_line_coupling{\poetrylineparameter{\c!coupling}}%
+   \edef\poetry_line_coupling_left{\poetrylineparameter{\c!coupling\c!left}}%
+   \ifempty\poetry_line_coupling_left\edef\poetry_line_coupling_left{\poetry_line_coupling}\fi%
+   \edef\poetry_line_coupling_right{\poetrylineparameter{\c!coupling\c!right}}%
+   \ifempty\poetry_line_coupling_right\edef\poetry_line_coupling_right{\poetry_line_coupling}\fi%
+   %
+   %coupling:\poetry_line_coupling:\poetry_line_coupling_left:\poetry_line_coupling_right;
    \par%
    \usepoetrylinestyleandcolor\c!style\c!color%
    \poetrylineparameter\c!before%
@@ -157,10 +164,10 @@
     \fi%
   } %% end of check_poetry_line
 
-\protected\def\singlet#1#2%
+\protected\def\singlet#1%
   {%
     \dontleavehmode%
-    \check_poetry_line{1}{#1}%
+    \check_poetry_line{\poetry_line_coupling_left}{#1}%
     % only left and right matter. everything else is treated as middle
     \edef\actual_alternative{\poetrylineparameter\c!alternative}%
     \hbox to \scratchwidth{%
@@ -178,7 +185,7 @@
 \protected\def\couplet#1#2%
   {%
     \dontleavehmode%
-    \check_poetry_line{1}{#1}%
+    \check_poetry_line{\poetry_line_coupling_left}{#1}%
     \edef\group_width_left{\group_width}%
     \box\poetry_line_box%
     %
@@ -186,7 +193,7 @@
       {\hbox to \poetry_intra_line_distance{\poetry_intra_line_separator}}
       {\hskip\poetry_intra_line_distance}
     %    
-    \check_poetry_line{1}{#2}%
+    \check_poetry_line{\poetry_line_coupling_right}{#2}%
     \box\poetry_line_box%
     \poetrylineparameter\c!after%
     \endgroup
@@ -194,7 +201,9 @@
   
 \def\lookup_and_update_group_width#1#2%
   {% #1: group id,  #2: natural width
-    \def\group_width{\ctxlua{poetryLookupAndUpdateGroupWidth("\the\poetry_count","#1","#2")}}%
+%    \edef\group_width{\ctxlua{poetryLookupAndUpdateGroupWidth("\the\poetry_count","#1","#2")}}%
+    \edef\group_width{\ctxlua{poetryLookupAndUpdateGroupWidth("\the\poetry_count","#1","#2",
+        "\datasetvariable{PoetryLines}{x\the\poetry_count}{y#1}")}}%
   }
 
 \def\poetry_save_computed_widths%
@@ -210,11 +219,13 @@
   local poetry        = thirddata.poetry
   poetry.widths       = {}
 
-  function poetryLookupAndUpdateGroupWidth(instance_id, group_id, natural_width)
-    instance_id = tostring(instance_id)
-    group_id    = tostring(group_id)
-  
-    local looked_up_width = context.datasetvariable("PoetryLines", 'x' .. instance_id, 'y' .. group_id) or 0
+  function poetryLookupAndUpdateGroupWidth(instance_id, group_id, natural_width, saved_width)
+    instance_id = 'x' .. instance_id
+    group_id    = 'y' .. group_id
+
+    -- todo: how can we "call" TeX code and get back the results instead of it being written to the TeX stream?
+    --    local looked_up_width = context.datasetvariable("PoetryLines", instance_id, group_id) or 0
+    local looked_up_width = tonumber(saved_width) or 0
 
     local instance = poetry.widths[instance_id] or {}
     poetry.widths[instance_id] = instance
@@ -225,16 +236,18 @@
       width = natural_width
     end
     instance[group_id] = width
+    
     context(looked_up_width .. 'pt')
   end
 
   function poetrySaveComputedWidths(instance_id)
-    instance_id = tostring(instance_id)
+    instance_id = 'x' .. instance_id
     local instance = poetry.widths[instance_id]
+    local vals = {}
     for k, v in pairs(instance) do
-      local kv = 'y' .. k .. "=" .. v
-      context.setdataset({"PoetryLines"}, {'x' .. instance_id}, {kv})
+      vals[k] = v
     end
+    context.setdataset({"PoetryLines"}, {instance_id}, vals)
   end  
 \stopluacode
 
