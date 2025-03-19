@@ -201,9 +201,8 @@
   
 \def\lookup_and_update_group_width#1#2%
   {% #1: group id,  #2: natural width
-%    \edef\group_width{\ctxlua{poetryLookupAndUpdateGroupWidth("\the\poetry_count","#1","#2")}}%
-    \edef\group_width{\ctxlua{poetryLookupAndUpdateGroupWidth("\the\poetry_count","#1","#2",
-        "\datasetvariable{PoetryLines}{x\the\poetry_count}{y#1}")}}%
+    \ctxlua{poetryLookupAndUpdateGroupWidth("\the\poetry_count","#1","#2",
+        "\datasetvariable{PoetryLines}{x\the\poetry_count}{y#1}")}%
   }
 
 \def\poetry_save_computed_widths%
@@ -223,6 +222,13 @@
     instance_id = 'x' .. instance_id
     group_id    = 'y' .. group_id
 
+    -- todo: I think the following is not fully flushed until the end of this function, so we can't
+    -- pull back the result. Once this works, we can reuse group_width as placeholder for it.
+    -- context("\\edef\\poetry_dummy_variable{HI}")  --{\\datasetvariable{PoetryLines}{x0}{ydefault}}")
+    -- print('val:', tokens.getters.macro("poetry_dummy_variable"))
+    -- the other workaround is to rely on implementation of datasetvariable and look up the table ourselves.
+    -- see the code in core-dat.lua line 178.
+    
     -- todo: how can we "call" TeX code and get back the results instead of it being written to the TeX stream?
     --    local looked_up_width = context.datasetvariable("PoetryLines", instance_id, group_id) or 0
     local looked_up_width = tonumber(saved_width) or 0
@@ -237,7 +243,7 @@
     end
     instance[group_id] = width
     
-    context(looked_up_width .. 'pt')
+    tokens.setters.macro("group_width", looked_up_width .. 'pt')
   end
 
   function poetrySaveComputedWidths(instance_id)
