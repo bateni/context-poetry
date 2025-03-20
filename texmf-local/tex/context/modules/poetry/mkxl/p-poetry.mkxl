@@ -36,6 +36,8 @@
    %%%%\c!separator=\vl\hskip.25em\vl,
    \c!strut=,  %% not implemented
    \c!after=\blank[line], % comes after \par
+   kashida=off,
+   %%%randomseed=123,
    %style=
    %color=
   ]
@@ -158,10 +160,12 @@
     \setbox\poetry_line_box\hbox{#2}%
     \natural_box_width=\wd\poetry_line_box%
     \lookup_and_update_group_width{#1}{\the\natural_box_width}%
+    \ctxlua{stretchText("\poetryparameter{kashida}", "\group_width")}%
+    %% todo: why are the following two lines needed?
     \computed_box_width=\group_width\relax%
-    \ifdim\natural_box_width<\computed_box_width\relax%
+    %\ifdim\natural_box_width<\computed_box_width\relax%
        \setbox\poetry_line_box\hbox to \computed_box_width{\unhbox\poetry_line_box}%
-    \fi%
+    %\fi%
   } %% end of check_poetry_line
 
 \protected\def\singlet#1%
@@ -257,5 +261,85 @@
   end  
 \stopluacode
 
+\startluacode
+  local nuts       = nodes.nuts
+  local getid      = nuts.getid
+  local fields     = node.fields
+  local getlist    = nuts.getlist
+  local setlist    = nuts.setlist
+  local getnext    = nuts.getnext
+  local getprev    = nuts.getprev
+  local getfield   = nuts.getfield
+  local setfield   = nuts.setfield
+  local getwidth   = nuts.getwidth
+  local getboxglue = nuts.getboxglue
+  local traverseid = nuts.traverseid
+  local new_glyph  = nuts.pool.glyph
+  local glyph_code = nodes.nodecodes.glyph
+  local log        = logs.reporter("poetry","kashida")
+  local chardata   = characters.data
+  local getrandom  = utilities.randomizer.get
+
+  math.setrandomseedi(0)
+  
+  function stretchText(enabled, desired_width)
+    enabled = enabled == "on" or enabled == "true"
+    -- this function uses nodes not nuts
+    local head = tex.box.poetry_line_box
+    local head = node.todirect(head)
+    local list = getlist(head)
+    
+    local natural_width = getwidth(head)
+    desired_width = string.todimen(desired_width)
+    log('head %a -- width: %a %a', head, natural_width, desired_width)
+    if desired_width <= natural_width then return end  -- nothing to be done
+
+    if not enabled then
+      list = nuts.hpack(list,desired_width,'exactly',listdir)
+      setlist(head, list)
+      list = getlist(list)
+      return
+    end
+    
+    -- let's keep track of all eligible positions
+    local elipos = {}
+    for n in traverseid(glyph_code, list) do
+      local prv = getprev(n)
+      if prv and getid(prv) == glyph_code then
+        local char1, char2 = getfield(prv,'char'), getfield(n,'char')
+        local data = chardata[char1]
+        local char_kind = data and data.specials and data.specials[1]
+        if char_kind == 'initial' or char_kind == 'medial' then
+          elipos[#elipos+1] = n
+        end
+      end
+    end
+    log('count: %a', #elipos)
+    if #elipos == 0 then return end  -- nothing can be done
+    while true do
+      local loc = getrandom("kashida", 1, #elipos)  --1
+      local n = elipos[loc]
+      local filler = nuts.copy(n)
+      setfield(filler,'char',0x640)
+      ls, nn = nuts.insertbefore(list,n,filler)
+      local listdir = nil
+      list = nuts.hpack(ls,desired_width,'exactly',listdir)
+      -- todo: do I need to set head = list here? or setlist(head,list) or not?
+      local set__, order__, sign = getboxglue(list)
+      -- sign: 0 (great), sign: 1 (need more), sign: 2 (went too much)
+      log('rehpack %a, glue sign %a', list, sign)
+      list = getlist(list)
+      setlist(head, list)
+      if sign == 0 then break end
+      if sign == 2 then
+        -- undo last insert
+        list = nuts.remove(list,filler)
+        list = nuts.hpack(list,desired_width,'exactly',listdir)
+        setlist(head, list)
+        break
+      end
+    end
+  end
+\stopluacode
   
 \protect
