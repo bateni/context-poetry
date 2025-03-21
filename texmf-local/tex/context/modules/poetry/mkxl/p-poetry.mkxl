@@ -30,7 +30,7 @@
 % todo: add system variables for new keys, values if needed.
 
 \setuppoetry
-  [\c!width=\v!local, % broad [full text width], fit?, DIM
+  [\c!width=\v!fit, % local [availablehsize], broad? [full text width], fit, DIM
    \c!distance=4\emwidth,  
    \c!location=\v!left, % middle, right 
    %%%%\c!separator=\vl\hskip.25em\vl,
@@ -65,15 +65,17 @@
    \poetryparameter\c!before%
    \par%
    %% todo: change to sth other than scratchwidth
-   %% todo: location (middle, etc.)
+   %% Figure out environment's width
    \doifelse{\poetryparameter\c!width}{\v!local}
-             {\scratchwidth\availablehsize}
-             {\doifelse{\poetryparameter\c!width}{\v!broad}
-             {\scratchwidth\hsize}
-             {\scratchwidth\poetryparameter\c!width\relax}}%
-   \ifdim\scratchwidth<\availablehsize\relax
-     \advance\rightskip by\dimexpr\availablehsize-\scratchwidth\relax%
-   \fi%
+               {\scratchwidth\availablehsize}
+             {\doifelse{\poetryparameter\c!width}{\v!fit}
+               {\lookup_max_width%
+                \scratchwidth\current_max_width}
+               {\scratchwidth\poetryparameter\c!width\relax}}%
+   %% Figure out location (left, middle, right)
+   \edef\poetry_line_location_left_skip{%
+%     \poetry_skip_for_alignment{\the\availablehsize}{\current_max_width}{\poetryparameter\c!location}}%
+     \poetry_skip_for_alignment{\the\availablehsize}{\the\scratchwidth}{\poetryparameter\c!location}}%
   }
 
 \permanent\protected\def\stoppoetry
@@ -85,6 +87,28 @@
    %\par
    \endgroup%
   }
+
+% #1: total width (dimen),  #2: current item's width (dimen),  #3: left, middle, right
+\def\poetry_skip_for_alignment#1#2#3{\ctxlua{poetryAlignmentSkip("#1","#2","#3")}}%
+
+\startluacode
+  local log        = logs.reporter("poetry","width")
+  
+  function poetryAlignmentSkip(total_width, current_width, alignment_option)
+    log('%a - %a - %a', total_width, current_width, alignment_option)
+    total_width   = string.todimen(total_width)
+    current_width = string.todimen(current_width)
+    if total_width <= current_width then return end
+    
+    local multiplier = 1
+    -- todo: use interface variables
+    if alignment_option == "left"  then multiplier = 0 end
+    if alignment_option == "right" then multiplier = 2 end
+    local skip_amount = (total_width - current_width) / 2 * multiplier
+
+    context.hskip(skip_amount / 2^16 .. 'pt')
+  end
+\stopluacode
 
 %D Next we define the command for adding one line of poetry, which may
 %D consist of one or two pieces.
@@ -166,21 +190,24 @@
     %\ifdim\natural_box_width<\computed_box_width\relax%
        \setbox\poetry_line_box\hbox to \computed_box_width{\unhbox\poetry_line_box}%
     %\fi%
-  } %% end of check_poetry_line
+  } %% end of check_poetry_line  
 
 \protected\def\singlet#1%
   {%
     \dontleavehmode%
     \check_poetry_line{\poetry_line_coupling_left}{#1}%
+    \update_max_width\group_width%
     % only left and right matter. everything else is treated as middle
-    \edef\actual_alternative{\poetrylineparameter\c!alternative}%
-    \hbox to \scratchwidth{%
-      \doifnot{\actual_alternative}{\v!left}
-              {\hfil}%
-      \box\poetry_line_box%
-      \doifnot{\actual_alternative}{\v!right}
-              {\hfil}%
-    }
+    \edef\actual_alternative{\poetrylineparameter\c!alternative}%   
+    %\hbox to \scratchwidth{%
+    \hbox {%
+      \poetry_line_location_left_skip%
+      \lookup_max_width%
+      \edef\poetry_line_location_left_skip{%
+        \poetry_skip_for_alignment{\the\scratchwidth}{\the\wd\poetry_line_box}{\poetrylineparameter\c!alternative}}%
+      \poetry_line_location_left_skip%
+        \box\poetry_line_box%
+    }%
     \par%
     \poetrylineparameter\c!after%
     \endgroup
@@ -189,16 +216,28 @@
 \protected\def\couplet#1#2%
   {%
     \dontleavehmode%
-    \check_poetry_line{\poetry_line_coupling_left}{#1}%
-    \edef\group_width_left{\group_width}%
-    \box\poetry_line_box%
-    %
-    \doiftextelse{\poetry_intra_line_separator}
-      {\hbox to \poetry_intra_line_distance{\poetry_intra_line_separator}}
-      {\hskip\poetry_intra_line_distance}
-    %    
-    \check_poetry_line{\poetry_line_coupling_right}{#2}%
-    \box\poetry_line_box%
+    \lookup_max_width%
+    \poetry_line_location_left_skip%
+    \hbox to \scratchwidth{%
+      \lookup_max_width%
+%      \edef\poetry_line_location_left_skip{%
+%        \poetry_skip_for_alignment{\the\scratchwidth}{\the\wd\poetry_line_box}{\poetrylineparameter\c!alternative}}%
+%      \poetry_line_location_left_skip%
+      \hbox to \scratchwidth{%
+      \check_poetry_line{\poetry_line_coupling_left}{#1}%
+      \edef\group_width_left{\group_width}%
+      \box\poetry_line_box%
+      %
+      \doiftextelse{\poetry_intra_line_separator}
+                   {\hbox to \poetry_intra_line_distance{\poetry_intra_line_separator}}
+                   {\hskip\poetry_intra_line_distance}
+      %    
+      \check_poetry_line{\poetry_line_coupling_right}{#2}%
+      \box\poetry_line_box%
+      \update_max_width{\the\dimexpr\group_width_left+\group_width+\poetry_intra_line_distance\relax}%
+      }%
+      \poetry_line_location_left_skip%
+    }%
     \poetrylineparameter\c!after%
     \endgroup
   }
@@ -209,6 +248,19 @@
         "\datasetvariable{PoetryLines}{x\the\poetry_count}{y#1}")}%
   }
 
+\def\update_max_width#1%
+  {% #1: width of current line
+    \ctxlua{poetryUpdateMaxWidth("\the\poetry_count","#1")}%
+  }
+
+\def\lookup_max_width%
+  {%
+    \edef\current_max_width{\datasetvariable{PoetryLines}{x\the\poetry_count}{max}pt}%
+    \doif{\current_max_width}{nil}{\edef\current_max_width{}}%
+    \ifempty\current_max_width\edef\current_max_width{1cm}\fi%
+    %\current_max_width%
+  }
+  
 \def\poetry_save_computed_widths%
   {%
     \ctxlua{poetrySaveComputedWidths(\the\poetry_count)}%
@@ -252,13 +304,27 @@
 
   function poetrySaveComputedWidths(instance_id)
     instance_id = 'x' .. instance_id
-    local instance = poetry.widths[instance_id]
+    local instance = poetry.widths[instance_id] or {}
     local vals = {}
     for k, v in pairs(instance) do
       vals[k] = v
     end
     context.setdataset({"PoetryLines"}, {instance_id}, vals)
-  end  
+  end
+
+  function poetryUpdateMaxWidth(instance_id, current_width)
+    instance_id = 'x' .. instance_id
+    current_width = tonumber(current_width:match('[.%d]+')) or 0  -- assumes 'pt' suffix
+    
+    local instance = poetry.widths[instance_id] or {}
+    poetry.widths[instance_id] = instance
+    local width = instance.max or 0
+
+    if current_width > width then
+      width = current_width
+    end
+    instance.max = width
+  end
 \stopluacode
 
 \startluacode
@@ -341,5 +407,5 @@
     end
   end
 \stopluacode
-  
+
 \protect
