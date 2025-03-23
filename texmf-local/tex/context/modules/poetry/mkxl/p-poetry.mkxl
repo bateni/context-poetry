@@ -224,10 +224,12 @@
       \box\poetry_line_box_left%
       \doifelse{\actual_alternative}{\v!line}
                {% line
+                 \doif{\poetryparameter\c!width}{local}{\hss}%
                  \doiftextelse{\poetry_intra_line_separator}
                               {\hbox to \poetry_intra_line_distance{\poetry_intra_line_separator}}
                               {\hskip\poetry_intra_line_distance}%
                  \update_max_width{\the\dimexpr\group_width_left+\group_width+\poetry_intra_line_distance\relax}%
+                 \doif{\poetryparameter\c!width}{local}{\hss}%
                }%
                {% stacked or staggered
                  \update_max_width{\the\wd\poetry_line_box_left\relax}%             
