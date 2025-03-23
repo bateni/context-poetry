@@ -1,0 +1,169 @@
+-- Lua companion to p-poetry.lmtx
+-- Poetry: Typesetting Persian poetry in ConTeXt
+-- Copyright (C) 2025  Mohammad Hossein Bateni
+
+thirddata           = thirddata           or {}
+thirddata.poetry    = thirddata.poetry    or {}
+  
+local poetry        = thirddata.poetry
+poetry.widths       = {}
+
+local log_width     = logs.reporter("poetry","width")
+local log_kash      = logs.reporter("poetry","kashida")
+
+-- todo: turn these into clds and use local functions to not
+-- clutter the namespace.
+
+function poetryAlignmentSkip(total_width, current_width, alignment_option)
+   log_width('%a - %a - %a', total_width, current_width, alignment_option)
+   total_width   = string.todimen(total_width)
+   current_width = string.todimen(current_width)
+   if total_width <= current_width then return end
+    
+   local multiplier = 1
+   -- todo: use interface variables
+   if alignment_option == "left"  then multiplier = 0 end
+   if alignment_option == "right" then multiplier = 2 end
+   local skip_amount = (total_width - current_width) / 2 * multiplier
+
+   context.hskip(skip_amount / 2^16 .. 'pt')
+end
+
+
+function poetryLookupAndUpdateGroupWidth(instance_id, group_id, natural_width, saved_width)
+   instance_id = 'x' .. instance_id
+   group_id    = 'y' .. group_id
+
+   -- todo: I think the following is not fully flushed until the end
+   -- of this function, so we can't pull back the result. Once this
+   -- works, we can reuse group_width as placeholder for it.
+   -- context("\\edef\\poetry_dummy_variable{HI}")
+   -- {\\datasetvariable{PoetryLines}{x0}{ydefault}}")
+   -- print('val:', tokens.getters.macro("poetry_dummy_variable"))
+   -- the other workaround is to rely on implementation of
+   -- datasetvariable and look up the table ourselves. see the code
+   -- in core-dat.lua line 178.
+    
+   -- todo: how can we "call" TeX code and get back the results instead of it being written to the TeX stream?
+   --    local looked_up_width = context.datasetvariable("PoetryLines", instance_id, group_id) or 0
+   local looked_up_width = tonumber(saved_width) or 0
+
+   local instance = poetry.widths[instance_id] or {}
+   poetry.widths[instance_id] = instance
+   local width = instance[group_id] or 0
+
+   natural_width = tonumber(natural_width:match('[.%d]+'))
+   if natural_width > width then
+      width = natural_width
+   end
+   instance[group_id] = width
+    
+   tokens.setters.macro("group_width", looked_up_width .. 'pt')
+end
+
+function poetrySaveComputedWidths(instance_id)
+   instance_id = 'x' .. instance_id
+   local instance = poetry.widths[instance_id] or {}
+   local vals = {}
+   local default = tex.hsize / 2^16
+   for k, v in pairs(instance) do
+      vals[k] = v < 1 and default or v
+   end
+   context.setdataset({"PoetryLines"}, {instance_id}, vals)
+end
+
+function poetryUpdateMaxWidth(instance_id, current_width)
+   instance_id = 'x' .. instance_id
+   current_width = tonumber(current_width:match('[.%d]+')) or 0  -- assumes 'pt' suffix
+    
+   local instance = poetry.widths[instance_id] or {}
+   poetry.widths[instance_id] = instance
+    -- default: 0 or hsize or availablehsize?
+    -- we take max, so setting this to a high value will make everything else moot
+    -- local default = tex.hsize / 2^16
+   local default = 0
+   local width = instance.max or default
+   
+   if current_width > width then
+      width = current_width
+   end
+   instance.max = width
+end
+
+local nuts       = nodes.nuts
+local getid      = nuts.getid
+local fields     = node.fields
+local getlist    = nuts.getlist
+local setlist    = nuts.setlist
+local getnext    = nuts.getnext
+local getprev    = nuts.getprev
+local getfield   = nuts.getfield
+local setfield   = nuts.setfield
+local getwidth   = nuts.getwidth
+local getboxglue = nuts.getboxglue
+local traverseid = nuts.traverseid
+local new_glyph  = nuts.pool.glyph
+local glyph_code = nodes.nodecodes.glyph
+local chardata   = characters.data
+local getrandom  = utilities.randomizer.get
+
+math.setrandomseedi(0)
+  
+function stretchText(enabled, desired_width)
+   enabled = enabled == "on" or enabled == "true"
+   -- this function uses nodes not nuts
+   local head = tex.box.poetry_line_box
+   local head = node.todirect(head)
+   local list = getlist(head)
+    
+   local natural_width = getwidth(head)
+   desired_width = string.todimen(desired_width)
+   log_kash('head %a -- width: %a %a', head, natural_width, desired_width)
+   if desired_width <= natural_width then return end  -- nothing to be done
+
+   if not enabled then
+      list = nuts.hpack(list,desired_width,'exactly',listdir)
+      setlist(head, list)
+      list = getlist(list)
+      return
+   end
+    
+    -- let's keep track of all eligible positions
+   local elipos = {}
+   for n in traverseid(glyph_code, list) do
+      local prv = getprev(n)
+      if prv and getid(prv) == glyph_code then
+	 local char1, char2 = getfield(prv,'char'), getfield(n,'char')
+	 local data = chardata[char1]
+	 local char_kind = data and data.specials and data.specials[1]
+	 if char_kind == 'initial' or char_kind == 'medial' then
+          elipos[#elipos+1] = n
+	 end
+      end
+   end
+   log_kash('count: %a', #elipos)
+   if #elipos == 0 then return end  -- nothing can be done
+   while true do
+      local loc = getrandom("kashida", 1, #elipos)  --1
+      local n = elipos[loc]
+      local filler = nuts.copy(n)
+      setfield(filler,'char',0x640)
+      ls, nn = nuts.insertbefore(list,n,filler)
+      local listdir = nil
+      list = nuts.hpack(ls,desired_width,'exactly',listdir)
+      -- todo: do I need to set head = list here? or setlist(head,list) or not?
+      local set__, order__, sign = getboxglue(list)
+      -- sign: 0 (great), sign: 1 (need more), sign: 2 (went too much)
+      log_kash('rehpack %a, glue sign %a', list, sign)
+      list = getlist(list)
+      setlist(head, list)
+      if sign == 0 then break end
+      if sign == 2 then
+	 -- undo last insert
+	 list = nuts.remove(list,filler)
+	 list = nuts.hpack(list,desired_width,'exactly',listdir)
+	 setlist(head, list)
+	 break
+      end
+   end
+end
