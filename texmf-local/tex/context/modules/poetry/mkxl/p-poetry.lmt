@@ -1,4 +1,11 @@
--- Lua companion to p-poetry.lmtx
+if not modules then modules = { } end modules ['p-poetry'] = {
+    version   = 1.001,
+    comment   = "companion to p-poetry.mkxl",
+    author    = "Mohammad Hossein Bateni",
+    copyright = "Mohammad Hossein Bateni",
+    license   = "MIT license"
+}
+
 -- Poetry: Typesetting Persian poetry in ConTeXt
 -- Copyright (C) 2025  Mohammad Hossein Bateni
 
@@ -13,6 +20,7 @@ local log_kash      = logs.reporter("poetry","kashida")
 
 -- todo: turn these into clds and use local functions to not
 -- clutter the namespace.
+-- todo: improve logging and tracing.
 
 function poetryAlignmentSkip(total_width, current_width, alignment_option)
    log_width('%a - %a - %a', total_width, current_width, alignment_option)
