@@ -30,7 +30,12 @@
 \newdimen\computed_box_width%
 \newdimen\natural_box_width%
 
-% todo: add system variables for new keys, values if needed.
+\startinterface all
+    \setinterfaceconstant {kashida}          {kashida}
+    \setinterfacevariable {stacked}          {stacked}
+    \setinterfacevariable {staggered}        {staggered}
+    \setinterfacevariable {step}             {step}
+\stopinterface
 
 \setuppoetry
   [\c!width=\v!fit, % local [availablehsize], broad? [full text width], fit, DIM
@@ -39,7 +44,7 @@
    %%%%\c!separator=\vl\hskip.25em\vl,
    \c!strut=,  %% not implemented
    \c!after=\blank[line], % comes after \par
-   kashida=off,
+   \c!kashida=\v!off,
    %%%randomseed=123,
    %style=
    %color=
@@ -164,7 +169,7 @@
     \setbox\poetry_line_box\hbox{#2}%
     \natural_box_width=\wd\poetry_line_box%
     \lookup_and_update_group_width{#1}{\the\natural_box_width}%
-    \ctxlua{stretchText("\poetryparameter{kashida}", "\group_width")}%
+    \ctxlua{stretchText("\poetryparameter{\c!kashida}", "\group_width")}%
     %% todo: why are the following two lines needed?
     \computed_box_width=\group_width\relax%
     \setbox\poetry_line_box\hbox to \computed_box_width{\unhbox\poetry_line_box}%
@@ -194,8 +199,8 @@
   {%
     \dontleavehmode%
     \edef\actual_alternative{\poetrylineparameter\c!alternative}%
-    \doif{\actual_alternative}{step}
-         {\edef\actual_alternative{staggered}}%
+    \doif{\actual_alternative}{\v!step}
+         {\edef\actual_alternative{\v!staggered}}%
     %% We need to set these boxes here because the grouping below
     %% will clear the second box.
     \check_poetry_line{\poetry_line_coupling_left}{#1}%
@@ -207,7 +212,7 @@
     \doif{\actual_alternative}{\v!auto}
          {\ifdim\dimexpr\group_width+\group_width_left+%
            \poetry_intra_line_distance>\scratchwidth\relax%
-            \edef\actual_alternative{staggered}%
+            \edef\actual_alternative{\v!staggered}%
           \else%
             \edef\actual_alternative{\v!line}%
           \fi%
@@ -215,7 +220,7 @@
     %
     \poetry_line_location_left_skip%
     \hbox to \scratchwidth{%
-      \doif{\actual_alternative}{stacked}
+      \doif{\actual_alternative}{\v!stacked}
            {% stacked
              \edef\poetry_line_location_inner_skip{%
                \poetry_skip_for_alignment{\the\scratchwidth}{\the\wd\poetry_line_box_left}{middle}}%
@@ -238,7 +243,7 @@
                  % The following doifelse % could have been simplified
                  % but I couldn't get the % macro expansion to work
                  % properly.
-                 \doifelse{\actual_alternative}{stacked}
+                 \doifelse{\actual_alternative}{\v!stacked}
                           {% stacked
                             \edef\poetry_line_location_inner_skip{%
                               \poetry_skip_for_alignment{\the\scratchwidth}{\the\wd\poetry_line_box}{middle}}%

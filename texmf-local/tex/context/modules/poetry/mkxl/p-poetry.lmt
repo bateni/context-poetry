@@ -22,8 +22,8 @@ function poetryAlignmentSkip(total_width, current_width, alignment_option)
     
    local multiplier = 1
    -- todo: use interface variables
-   if alignment_option == "left"  then multiplier = 0 end
-   if alignment_option == "right" then multiplier = 2 end
+   if alignment_option == interfaces.variables.left  then multiplier = 0 end
+   if alignment_option == interfaces.variables.right then multiplier = 2 end
    local skip_amount = (total_width - current_width) / 2 * multiplier
 
    context.hskip(skip_amount / 2^16 .. 'pt')
@@ -110,7 +110,7 @@ local getrandom  = utilities.randomizer.get
 math.setrandomseedi(0)
   
 function stretchText(enabled, desired_width)
-   enabled = enabled == "on" or enabled == "true"
+   enabled = enabled == interfaces.variables.on or enabled == interfaces.variables["true"]
    -- this function uses nodes not nuts
    local head = tex.box.poetry_line_box
    local head = node.todirect(head)
