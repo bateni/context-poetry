@@ -75,18 +75,14 @@
                {\scratchwidth\poetryparameter\c!width\relax}}%
    %% Figure out location (left, middle, right)
    \edef\poetry_line_location_left_skip{%
-%     \poetry_skip_for_alignment{\the\availablehsize}{\current_max_width}{\poetryparameter\c!location}}%
      \poetry_skip_for_alignment{\the\availablehsize}{\the\scratchwidth}{\poetryparameter\c!location}}%
-   \writestatus{HOSSEIN}{scw: \the\scratchwidth -- ls: \poetry_line_location_left_skip}%
   }
 
 \permanent\protected\def\stoppoetry
   {%
    \poetry_save_computed_widths%
-   %\par%
    \blank[back]%
    \poetryparameter\c!after%
-   %\par
    \endgroup%
   }
 
@@ -119,10 +115,10 @@
 \installcommandhandler \????poetryline {poetryline} \????poetryline
 
 \setuppoetryline
-  [\c!coupling=\v!default, % or NUM, or NUM:NUM?
+  [\c!coupling=\v!default, % or +, - (not implemented yet)
    %\c!coupling\c!left=,
    %\c!coupling\c!right=,
-   \c!alternative=\v!auto, % stacked, line, step or staggered?, middle, left, right
+   \c!alternative=\v!auto, % stacked, line, step/staggered, middle, left, right
    \c!n=2, % = couplet, or 1 = hemistich
    \c!separator=,  % {\hss - \hss}
    \c!distance=,
@@ -171,7 +167,6 @@
    \edef\poetry_line_coupling_right{\poetrylineparameter{\c!coupling\c!right}}%
    \ifempty\poetry_line_coupling_right\edef\poetry_line_coupling_right{\poetry_line_coupling}\fi%
    %
-   %coupling:\poetry_line_coupling:\poetry_line_coupling_left:\poetry_line_coupling_right;
    \par%
    \usepoetrylinestyleandcolor\c!style\c!color%
    \poetrylineparameter\c!before%
@@ -189,9 +184,7 @@
     \ctxlua{stretchText("\poetryparameter{kashida}", "\group_width")}%
     %% todo: why are the following two lines needed?
     \computed_box_width=\group_width\relax%
-    %\ifdim\natural_box_width<\computed_box_width\relax%
-       \setbox\poetry_line_box\hbox to \computed_box_width{\unhbox\poetry_line_box}%
-    %\fi%
+    \setbox\poetry_line_box\hbox to \computed_box_width{\unhbox\poetry_line_box}%
   } %% end of check_poetry_line  
 
 \protected\def\singlet#1%
@@ -201,7 +194,6 @@
     \update_max_width\group_width%
     % only left and right matter. everything else is treated as middle
     \edef\actual_alternative{\poetrylineparameter\c!alternative}%   
-    %\hbox to \scratchwidth{%
     \hbox {%
       \poetry_line_location_left_skip%
       \lookup_max_width%
@@ -221,92 +213,75 @@
     \edef\actual_alternative{\poetrylineparameter\c!alternative}%
     \doif{\actual_alternative}{step}
          {\edef\actual_alternative{staggered}}%
-    %% todo: handle case of unknown alternative    
+    %% We need to set these boxes here because the grouping below
+    %% will clear the second box.
     \check_poetry_line{\poetry_line_coupling_left}{#1}%
     \edef\group_width_left{\group_width}%
     \setbox\poetry_line_box_left\box\poetry_line_box%
     \check_poetry_line{\poetry_line_coupling_right}{#2}%
     \lookup_max_width%
-    %{\lefttoright\the\scratchwidth;\current_max_width:}     
-    \poetry_line_location_left_skip%
-    %\vbox{%
-      %\hbox
-        {%
-%    \hbox to \scratchwidth{%
-%      \lookup_max_width%
-%      \edef\poetry_line_location_left_skip{%
-%        \poetry_skip_for_alignment{\the\scratchwidth}{\the\wd\poetry_line_box}{\poetrylineparameter\c!alternative}}%
-          %      \poetry_line_location_left_skip%
-      %%%%%%%%%%%%%%%%%%
-      %\synchronizeinlinedirection%    
-      %\synchronizedisplaydirection%    
-      %\synchronizelayoutdirection%    
-      \autodirhbox to \scratchwidth{%
-      %%% todo: refactor the code and simplify
-      \doifelse{\actual_alternative}{stacked}
-               {%
-                 \edef\poetry_line_location_inner_skip{%
-                   \poetry_skip_for_alignment{\the\scratchwidth}{\the\wd\poetry_line_box_left}{middle}}%
-                 \poetry_line_location_inner_skip%
-                 \box\poetry_line_box_left%
-                 \update_max_width{\the\wd\poetry_line_box_left\relax}%             
-               }
-               {%
-                 \box\poetry_line_box_left%
-               }%
-      %
-      \doif{\actual_alternative}{\v!auto}
+    %
+    \doif{\actual_alternative}{\v!auto}
          {\ifdim\dimexpr\group_width+\group_width_left+%
            \poetry_intra_line_distance>\scratchwidth\relax%
             \edef\actual_alternative{staggered}%
           \else%
             \edef\actual_alternative{\v!line}%
           \fi%
-          \writestatus{HOSSEIN}{auto -> \actual_alternative}  
          }%      
-      %%%%%MHB
-      \doif{\actual_alternative}{\v!line}
-           {%
-             \doiftextelse{\poetry_intra_line_separator}
-                          {\hbox to \poetry_intra_line_distance{\poetry_intra_line_separator}}
-                          {\hskip\poetry_intra_line_distance}%
-             \update_max_width{\the\dimexpr\group_width_left+\group_width+\poetry_intra_line_distance\relax}%
-           }%
-      %% todo: combine the following two?
+    %
+    \poetry_line_location_left_skip%
+    \hbox to \scratchwidth{%
       \doif{\actual_alternative}{stacked}
-           {%
-             \egroup\\\poetry_line_location_left_skip%
-             \ruledhbox to \scratchwidth\bgroup%
-             %\\%
+           {% stacked
              \edef\poetry_line_location_inner_skip{%
-               \poetry_skip_for_alignment{\the\scratchwidth}{\the\wd\poetry_line_box}{middle}}%
+               \poetry_skip_for_alignment{\the\scratchwidth}{\the\wd\poetry_line_box_left}{middle}}%
              \poetry_line_location_inner_skip%
-             \update_max_width{\the\wd\poetry_line_box\relax}%             
            }%
-      \doif{\actual_alternative}{staggered}
-           {%MHB why complain about endgroup [with autodir]??
-             \egroup\\\poetry_line_location_left_skip%
-             \ruledhbox to \scratchwidth\bgroup%
-             %\\
-             \edef\poetry_line_location_inner_skip{%
-               \poetry_skip_for_alignment{\the\scratchwidth}{\the\wd\poetry_line_box}{right}}%
-             \poetry_line_location_inner_skip%
-             \update_max_width{\the\wd\poetry_line_box\relax}%             
-           }%
-      %    
+      \box\poetry_line_box_left%
+      \doifelse{\actual_alternative}{\v!line}
+               {% line
+                 \doiftextelse{\poetry_intra_line_separator}
+                              {\hbox to \poetry_intra_line_distance{\poetry_intra_line_separator}}
+                              {\hskip\poetry_intra_line_distance}%
+                 \update_max_width{\the\dimexpr\group_width_left+\group_width+\poetry_intra_line_distance\relax}%
+               }%
+               {% stacked or staggered
+                 \update_max_width{\the\wd\poetry_line_box_left\relax}%             
+                 \egroup\\\poetry_line_location_left_skip%
+                 \hbox to \scratchwidth\bgroup%
+                 % The following doifelse % could have been simplified
+                 % but I couldn't get the % macro expansion to work
+                 % properly.
+                 \doifelse{\actual_alternative}{stacked}
+                          {% stacked
+                            \edef\poetry_line_location_inner_skip{%
+                              \poetry_skip_for_alignment{\the\scratchwidth}{\the\wd\poetry_line_box}{middle}}%
+                          }%
+                          {% staggered
+                            \edef\poetry_line_location_inner_skip{%
+                              \poetry_skip_for_alignment{\the\scratchwidth}{\the\wd\poetry_line_box}{right}}%
+                          }%
+                 \poetry_line_location_inner_skip%
+                 \update_max_width{\the\wd\poetry_line_box\relax}%             
+               }%
       \box\poetry_line_box%
-      }%
     }%
     \poetrylineparameter\c!after%
     \endgroup
   }
-  
+
+%D Poetry (half) lines can be coupled together to have the same 
+%D typeset size. So we compute and store in a dataset the maximum width
+%D of lines in each group.  
 \def\lookup_and_update_group_width#1#2%
-  {% #1: group id,  #2: natural width
+  {% #1: group (or "coupling") id,  #2: natural width
     \ctxlua{poetryLookupAndUpdateGroupWidth("\the\poetry_count","#1","#2",
         "\datasetvariable{PoetryLines}{x\the\poetry_count}{y#1}")}%
   }
 
+%D We also need to know the maximum width of each (full) poetry line for
+%D the width=fit option.  
 \def\update_max_width#1%
   {% #1: width of current line
     \ctxlua{poetryUpdateMaxWidth("\the\poetry_count","#1")}%
@@ -317,12 +292,15 @@
     \edef\current_max_width{\datasetvariable{PoetryLines}{x\the\poetry_count}{max}}%
     \doif{\current_max_width}{nil}{\edef\current_max_width{}}%
     \ifempty\current_max_width%
-      \edef\current_max_width{1cm}% MHB: \availablehsize?
+      \edef\current_max_width{1cm}% Should this be \availablehsize?
     \else%
       \edef\current_max_width{\current_max_width pt}%
     \fi%
   }
-  
+
+%D The above update commands store maximum values in a lua table. At
+%D the end of each poetry (i.e., after the corresponding
+%D \typing{\\stoppoetry}, we collect and write these down in a dataset.
 \def\poetry_save_computed_widths%
   {%
     \ctxlua{poetrySaveComputedWidths(\the\poetry_count)}%
@@ -340,12 +318,15 @@
     instance_id = 'x' .. instance_id
     group_id    = 'y' .. group_id
 
-    -- todo: I think the following is not fully flushed until the end of this function, so we can't
-    -- pull back the result. Once this works, we can reuse group_width as placeholder for it.
-    -- context("\\edef\\poetry_dummy_variable{HI}")  --{\\datasetvariable{PoetryLines}{x0}{ydefault}}")
+    -- todo: I think the following is not fully flushed until the end
+    -- of this function, so we can't pull back the result. Once this
+    -- works, we can reuse group_width as placeholder for it.
+    -- context("\\edef\\poetry_dummy_variable{HI}")
+    -- {\\datasetvariable{PoetryLines}{x0}{ydefault}}")
     -- print('val:', tokens.getters.macro("poetry_dummy_variable"))
-    -- the other workaround is to rely on implementation of datasetvariable and look up the table ourselves.
-    -- see the code in core-dat.lua line 178.
+    -- the other workaround is to rely on implementation of
+    -- datasetvariable and look up the table ourselves. see the code
+    -- in core-dat.lua line 178.
     
     -- todo: how can we "call" TeX code and get back the results instead of it being written to the TeX stream?
     --    local looked_up_width = context.datasetvariable("PoetryLines", instance_id, group_id) or 0
@@ -377,7 +358,6 @@
 
   function poetryUpdateMaxWidth(instance_id, current_width)
     instance_id = 'x' .. instance_id
-    print('SALAAAAM', current_width)
     current_width = tonumber(current_width:match('[.%d]+')) or 0  -- assumes 'pt' suffix
     
     local instance = poetry.widths[instance_id] or {}
