@@ -24,6 +24,7 @@
 \poetry_count\zerocount
 
 \newbox\poetry_line_box%
+\newbox\poetry_line_box_left%
 \newdimen\computed_box_width%
 \newdimen\natural_box_width%
 
@@ -69,13 +70,14 @@
    \doifelse{\poetryparameter\c!width}{\v!local}
                {\scratchwidth\availablehsize}
              {\doifelse{\poetryparameter\c!width}{\v!fit}
-               {\lookup_max_width%
+               {\lookup_max_width% MHB
                 \scratchwidth\current_max_width}
                {\scratchwidth\poetryparameter\c!width\relax}}%
    %% Figure out location (left, middle, right)
    \edef\poetry_line_location_left_skip{%
 %     \poetry_skip_for_alignment{\the\availablehsize}{\current_max_width}{\poetryparameter\c!location}}%
      \poetry_skip_for_alignment{\the\availablehsize}{\the\scratchwidth}{\poetryparameter\c!location}}%
+   \writestatus{HOSSEIN}{scw: \the\scratchwidth -- ls: \poetry_line_location_left_skip}%
   }
 
 \permanent\protected\def\stoppoetry
@@ -204,7 +206,7 @@
       \poetry_line_location_left_skip%
       \lookup_max_width%
       \edef\poetry_line_location_left_skip{%
-        \poetry_skip_for_alignment{\the\scratchwidth}{\the\wd\poetry_line_box}{\poetrylineparameter\c!alternative}}%
+        \poetry_skip_for_alignment{\the\scratchwidth}{\the\wd\poetry_line_box}{\actual_alternative}}%
       \poetry_line_location_left_skip%
         \box\poetry_line_box%
     }%
@@ -216,27 +218,84 @@
 \protected\def\couplet#1#2%
   {%
     \dontleavehmode%
+    \edef\actual_alternative{\poetrylineparameter\c!alternative}%
+    \doif{\actual_alternative}{step}
+         {\edef\actual_alternative{staggered}}%
+    %% todo: handle case of unknown alternative    
+    \check_poetry_line{\poetry_line_coupling_left}{#1}%
+    \edef\group_width_left{\group_width}%
+    \setbox\poetry_line_box_left\box\poetry_line_box%
+    \check_poetry_line{\poetry_line_coupling_right}{#2}%
     \lookup_max_width%
+    %{\lefttoright\the\scratchwidth;\current_max_width:}     
     \poetry_line_location_left_skip%
-    \hbox to \scratchwidth{%
-      \lookup_max_width%
+    %\vbox{%
+      %\hbox
+        {%
+%    \hbox to \scratchwidth{%
+%      \lookup_max_width%
 %      \edef\poetry_line_location_left_skip{%
 %        \poetry_skip_for_alignment{\the\scratchwidth}{\the\wd\poetry_line_box}{\poetrylineparameter\c!alternative}}%
-%      \poetry_line_location_left_skip%
-      \hbox to \scratchwidth{%
-      \check_poetry_line{\poetry_line_coupling_left}{#1}%
-      \edef\group_width_left{\group_width}%
-      \box\poetry_line_box%
+          %      \poetry_line_location_left_skip%
+      %%%%%%%%%%%%%%%%%%
+      %\synchronizeinlinedirection%    
+      %\synchronizedisplaydirection%    
+      %\synchronizelayoutdirection%    
+      \autodirhbox to \scratchwidth{%
+      %%% todo: refactor the code and simplify
+      \doifelse{\actual_alternative}{stacked}
+               {%
+                 \edef\poetry_line_location_inner_skip{%
+                   \poetry_skip_for_alignment{\the\scratchwidth}{\the\wd\poetry_line_box_left}{middle}}%
+                 \poetry_line_location_inner_skip%
+                 \box\poetry_line_box_left%
+                 \update_max_width{\the\wd\poetry_line_box_left\relax}%             
+               }
+               {%
+                 \box\poetry_line_box_left%
+               }%
       %
-      \doiftextelse{\poetry_intra_line_separator}
-                   {\hbox to \poetry_intra_line_distance{\poetry_intra_line_separator}}
-                   {\hskip\poetry_intra_line_distance}
+      \doif{\actual_alternative}{\v!auto}
+         {\ifdim\dimexpr\group_width+\group_width_left+%
+           \poetry_intra_line_distance>\scratchwidth\relax%
+            \edef\actual_alternative{staggered}%
+          \else%
+            \edef\actual_alternative{\v!line}%
+          \fi%
+          \writestatus{HOSSEIN}{auto -> \actual_alternative}  
+         }%      
+      %%%%%MHB
+      \doif{\actual_alternative}{\v!line}
+           {%
+             \doiftextelse{\poetry_intra_line_separator}
+                          {\hbox to \poetry_intra_line_distance{\poetry_intra_line_separator}}
+                          {\hskip\poetry_intra_line_distance}%
+             \update_max_width{\the\dimexpr\group_width_left+\group_width+\poetry_intra_line_distance\relax}%
+           }%
+      %% todo: combine the following two?
+      \doif{\actual_alternative}{stacked}
+           {%
+             \egroup\\\poetry_line_location_left_skip%
+             \ruledhbox to \scratchwidth\bgroup%
+             %\\%
+             \edef\poetry_line_location_inner_skip{%
+               \poetry_skip_for_alignment{\the\scratchwidth}{\the\wd\poetry_line_box}{middle}}%
+             \poetry_line_location_inner_skip%
+             \update_max_width{\the\wd\poetry_line_box\relax}%             
+           }%
+      \doif{\actual_alternative}{staggered}
+           {%MHB why complain about endgroup [with autodir]??
+             \egroup\\\poetry_line_location_left_skip%
+             \ruledhbox to \scratchwidth\bgroup%
+             %\\
+             \edef\poetry_line_location_inner_skip{%
+               \poetry_skip_for_alignment{\the\scratchwidth}{\the\wd\poetry_line_box}{right}}%
+             \poetry_line_location_inner_skip%
+             \update_max_width{\the\wd\poetry_line_box\relax}%             
+           }%
       %    
-      \check_poetry_line{\poetry_line_coupling_right}{#2}%
       \box\poetry_line_box%
-      \update_max_width{\the\dimexpr\group_width_left+\group_width+\poetry_intra_line_distance\relax}%
       }%
-      \poetry_line_location_left_skip%
     }%
     \poetrylineparameter\c!after%
     \endgroup
@@ -255,10 +314,13 @@
 
 \def\lookup_max_width%
   {%
-    \edef\current_max_width{\datasetvariable{PoetryLines}{x\the\poetry_count}{max}pt}%
+    \edef\current_max_width{\datasetvariable{PoetryLines}{x\the\poetry_count}{max}}%
     \doif{\current_max_width}{nil}{\edef\current_max_width{}}%
-    \ifempty\current_max_width\edef\current_max_width{1cm}\fi%
-    %\current_max_width%
+    \ifempty\current_max_width%
+      \edef\current_max_width{1cm}% MHB: \availablehsize?
+    \else%
+      \edef\current_max_width{\current_max_width pt}%
+    \fi%
   }
   
 \def\poetry_save_computed_widths%
@@ -306,19 +368,25 @@
     instance_id = 'x' .. instance_id
     local instance = poetry.widths[instance_id] or {}
     local vals = {}
+    local default = tex.hsize / 2^16
     for k, v in pairs(instance) do
-      vals[k] = v
+      vals[k] = v < 1 and default or v
     end
     context.setdataset({"PoetryLines"}, {instance_id}, vals)
   end
 
   function poetryUpdateMaxWidth(instance_id, current_width)
     instance_id = 'x' .. instance_id
+    print('SALAAAAM', current_width)
     current_width = tonumber(current_width:match('[.%d]+')) or 0  -- assumes 'pt' suffix
     
     local instance = poetry.widths[instance_id] or {}
     poetry.widths[instance_id] = instance
-    local width = instance.max or 0
+    -- default: 0 or hsize or availablehsize?
+    -- we take max, so setting this to a high value will make everything else moot
+    -- local default = tex.hsize / 2^16
+    local default = 0
+    local width = instance.max or default
 
     if current_width > width then
       width = current_width
