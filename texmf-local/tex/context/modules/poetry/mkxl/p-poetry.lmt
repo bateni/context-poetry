@@ -1,5 +1,5 @@
 if not modules then modules = { } end modules ['p-poetry'] = {
-    version   = 1.001,
+    version   = 1.010,
     comment   = "companion to p-poetry.mkxl",
     author    = "Mohammad Hossein Bateni",
     copyright = "Mohammad Hossein Bateni",
