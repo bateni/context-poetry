@@ -142,15 +142,16 @@ function stretchText(enabled, desired_width)
       local prv = getprev(n)
       if prv and getid(prv) == glyph_code then
 	 local char1, char2 = getfield(prv,'char'), getfield(n,'char')
-	 local data = chardata[char1]
+	 local data = chardata[char2]
 	 local char_kind = data and data.specials and data.specials[1]
-	 if char_kind == 'initial' or char_kind == 'medial' then
+	 if char_kind == 'final' or char_kind == 'medial' then
           elipos[#elipos+1] = n
 	 end
       end
    end
    log_kash('count: %a', #elipos)
    if #elipos == 0 then return end  -- nothing can be done
+   -- to make the following more efficient, we may want to run a binary search.
    while true do
       local loc = getrandom("kashida", 1, #elipos)  --1
       local n = elipos[loc]
