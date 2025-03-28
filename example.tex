@@ -1,0 +1,257 @@
+\usemodule[p-poetry]
+\setupwhitespace[big]
+\setupdirections[bidi=global,method=unicode]
+\starttext
+
+Here is \quotation{Amazing Grace} written by John Newton:
+
+%% Common definition for all the English poetry settings below.
+%\setuppoetry[before={%
+%    \blackrule[width=\textwidth,height=.2ex]\page[no]},
+%  after={\page[no]\blackrule[width=\textwidth,height=.2ex]}]
+%%
+
+\startpoetry[width=local,color=darkblue]
+  \poetryline{Amazing Grace! how sweet the sound}{That saved a wretch like me;}
+  \poetryline{I once was lost, but now am found;}{Was blind, but now I see.}
+\stoppoetry
+
+Here, the four \emph{hemistichs} all get the same width.
+So extra spaces get added to get the alignment right.
+
+In the above, we used \type{width=local}.  Since the default
+\emph{desired} inter-hemistich distance is \type{4em}, the two hemistichs did not fit
+on the line and automatically switched to the
+\type{alternative=staggered} mode.
+
+Let's reduce that distance and see that in \type{alternative=auto} or
+\type{alternative=line} modes, we can also fit things in the line.
+
+\startpoetry[width=local,distance=2\emwidth,color=darkblue]
+  \poetryline{Amazing Grace! how sweet the sound}{That saved a wretch like me;}
+  \poetryline{I once was lost, but now am found;}{Was blind, but now I see.}
+\stoppoetry
+
+This capability is the original reason I developed this module to
+extend what was available in the \type{m-hemistich} module already.
+We have three alternatives for typesetting a two-hemistich line of poetry:
+\startitemize[packed]
+\item {\bf line} forces typesetting of the two half-lines next to each
+  other with the desired distance between them.
+\item {\bf staggered} typesets the two half-lines on different lines
+  with the first flushleft and the second flushright.
+\item {\bf stacked} typesets the two half-lines on top of each other.
+\item {\bf auto} picks between the first two modes preferring the first one.
+\stopitemize
+
+Another capability is the \type{width=fit} option.  Here we are not
+restricted to a fixed width or \type{width=local}.  This or the
+fixed-width option can be combined with \type{location=middle} to
+place the whole box of poetry horizontally centered on the page.
+
+Though this is my preferred settings, it comes with a caveat---a bug I
+hope to fix soon: The line may not fit the local width, and then we'd
+switch to \type{alternative=staggered}, which then reduces the maximum
+line width to that of one hemistich, in effect leading to an
+\type{alternative=stacked} mode.
+
+In typesetting Persian poetry, we sometimes have alternative forms.
+In the \emph{mostazad} poetry form, each line consists of two
+half-lines, though of different width. This can of course be easily
+typeset with any table mechanism, say Natural Tables. However, we add
+the option of providing different \type{coupling} parameters for
+half-lines of poetry. In the case of mostazad, we use something like
+\type{coupling:right=extra}, leaving \type{coupling:left} to fall back
+on \type{coupling=default}.
+
+Other types of Persian poetry (for example, Tarkib-Band) consists of
+differnet sections. Each section has a number of lines where all half
+lines have the same width; then the section ends with a line of
+different width, meter, and usually shape. For instance, the normal
+lines are typically typeset as \type{alternative=line} but the
+separating line is often typeset as \type{alternative=stacked}.
+Whether the width of these separator lines (SL) are also match to the
+normal lines (NL) may vary.
+\startitemize[n]
+\item Some would use the same \type{alternative=line} and match the
+  widths.
+\item Some would use the same \type{alternative=stacked} and match the
+  widths.
+\item Some would use the same \type{alternative=stacked} and not match
+  the widths. Specially in this case, it's possible that widths of
+  lines from different sections are matched or not. One may even want
+  to match the width of NLs across sections and the width of the SLs
+  together.
+\stopitemize
+
+There's yet another type of classic Persian poetry (called mosammat)
+which can consist of odd number of lines. In this case, the last
+half-line is usually middle-aligned.
+
+To demonstrate thee options, we use Persian poetry.
+
+In this example, the same line of poetry is typeset with the four
+alternatives while using \type{width=fit} and \type{location=middle}.
+
+%% Common definition for all the Persian poetry settings below.
+\setuppoetry[before={%
+    \setupalign[r2l]%
+    \switchtobodyfont[dabeerformal]%
+    \blackrule[width=\textwidth,height=.2ex]\page[no]},
+  after={\page[no]\blackrule[width=\textwidth,height=.2ex]}]
+%%
+
+\startpoetry[color=red,%location=right,
+  location=middle,
+  %kashida=on,
+]
+  \poetryline[alternative=line]
+    {میازار موری که دانه‌کش است}
+    {که جان دارد و جان شیرین خوش است}
+
+  \poetryline[alternative=staggered]
+    {میازار موری که دانه‌کش است}
+    {که جان دارد و جان شیرین خوش است}
+  
+  \poetryline[alternative=stacked]
+    {میازار موری که دانه‌کش است}
+    {که جان دارد و جان شیرین خوش است}
+
+  \poetryline
+    {میازار موری که دانه‌کش است}
+    {که جان دارد و جان شیرین خوش است}
+\stoppoetry
+
+We demonstrate the same poetry line with the \type{kashida=on} option.
+Note that kashida is inserted in random locations of the first
+half-line (because the second half-line is wider and determines the
+maximum width).
+
+\startpoetry[color=blue,
+  location=middle,
+  kashida=on,
+]
+  \poetryline[alternative=line]
+    {میازار موری که دانه‌کش است}
+    {که جان دارد و جان شیرین خوش است}
+ 
+  \poetryline[alternative=stacked]
+    {میازار موری که دانه‌کش است}
+    {که جان دارد و جان شیرین خوش است}
+
+\stoppoetry
+
+Next comes an excerpt from the famous TarkibBand by Mohtasham Kashani.
+Here we let different sections match the width on the normal and separator lines.
+
+\define\skippedlines{\poetryline[n=1,alternative=middle,coupling=misc]{\definedfont[dejavusans]⋮}}
+
+\definepoetry[TarkibBand][distance=1cm,color=orange,kashida=on,width=local]
+\definepoetryline[Band][coupling=band,alternative=stacked,color=red]
+\startTarkibBand
+\poetryline
+{باز این چه شورش است که در خلق عالم است}
+{باز این چه نوحه و چه عزا و چه ماتم است}
+
+\poetryline
+ {باز این چه رستخیز عظیم است کز زمین}
+ {بی‌ نفخ صور خاسته تا عرش اعظم است}
+
+\skippedlines
+
+\poetryline
+  {جن و ملک بر آدمیان نوحه می‌کنند}
+  {گویا عزای اشرف اولاد آدم است}
+
+\Band
+{خورشید آسمان و زمین، نور مشرقین}
+{پروردهٔ کنار رسول خدا حسین}
+
+\poetryline
+{کشتی‌شکست‌خوردهٔ طوفان کربلا}
+{در خاک و خون تپیدهٔ میدان کربلا}
+
+\poetryline
+{گر چشم روزگار بر او فاش می‌گریست}
+{خون می‌گذشت از سر ایوان کربلا}
+
+\skippedlines
+
+\poetryline
+{آه از دمی که لشکر اعدا نکرده شرم}
+{کردند رو به خیمهٔ سلطان کربلا}
+
+\Band
+{آن دم فلک بر آتش غیرت سپند شد}
+{کز خوفِ خصم، در حرم، افغان بلند شد}
+
+\stopTarkibBand
+
+We now demonstrate that Kashida works with diacritics as well,
+using the most well-known lines from Hafez.
+
+\definepoetry[Ghazal][color=magenta,kashida=on,width=local]
+\startbuffer[hafez]
+  \poetryline
+    {اَلا یا اَیُّهَا السّاقی اَدِرْ کَأسَاً و ناوِلْها}
+    {که عشق آسان نمود اوّل ولی افتاد مشکل‌ها}
+  \poetryline
+    {به بویِ نافه‌ای کآخِر صبا زان طُرّه بُگشاید}
+    {ز تابِ جَعدِ مشکینش چه خون افتاد در دل‌ها}
+\stopbuffer
+\startGhazal
+  \getbuffer[hafez]
+\stopGhazal
+
+
+Here's a mosammat from Naser Khosrow with three lines per section.
+
+\definepoetry[Mosammat][width=local,distance=5mm,color=darkyellow,kashida=on]
+\definepoetryline[Tak][n=1]
+
+\startMosammat
+\poetryline
+  {ای گنبد زنگارگون، ای پرجنون پرفنون}
+  {هم تو شریف و هم تو دون، هم گمره و هم رهنمون}
+
+\Tak
+{دریای سبز سرنگون، پر گوهر بی منتهی}
+
+\poetryline
+{انوار و ظلمت را مکان، بر جای و دائم تازنان}
+{ای مادر نامهربان، هم سالخورده هم جوان}
+
+\Tak
+{گویا ولیکن بی زبان، جویا ولیکن بی‌وفا}
+
+\poetryline
+{گه خاک چون دیبا کنی، گه شاخ پر جوزا کنی}
+{گه خوی بد زیبا کنی، از بادیه دریا کنی}
+
+\Tak
+{گه سنگ چون مینا کنی، وز نار بستانی ضیا}
+\stopMosammat
+
+And finally a mostazad by MohammadTaghi Bahar, which barring the
+kashida support, could have been easily typeset by any table
+mechanism.
+
+\definepoetryline[Mostazad][couplingright=extra,alternative=line]
+\startpoetry[color=darkgreen,
+  kashida=on,location=middle]
+  \Mostazad
+    {این دود سیه‌فام که از بامِ وطن خاست}
+    {از ماست که بر ماست}
+  \Mostazad
+    {وین شعله سوزان که برآمد ز چپ و راست}
+    {از ماست که ‌بر ماست}
+  \Mostazad
+    {جان گر به لب ما رسد، از غیر ننالیم}
+    {با کس نسگالیم}
+  \Mostazad
+    {از خویش بنالیم که جانِ سخن اینجاست}
+    {از ماست که ‌بر ماست}
+\stoppoetry
+
+
+\stoptext
