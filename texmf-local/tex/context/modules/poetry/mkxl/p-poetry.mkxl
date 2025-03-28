@@ -32,6 +32,7 @@
 
 \startinterface all
     \setinterfaceconstant {kashida}          {kashida}
+    \setinterfaceconstant {extension}        {extension}
     \setinterfacevariable {stacked}          {stacked}
     \setinterfacevariable {staggered}        {staggered}
     \setinterfacevariable {step}             {step}
@@ -111,6 +112,7 @@
    \c!separator=,  % {\hss - \hss}
    \c!distance=,
    %\c!distance=1cm, % between two hemistichs
+   \c!separator\c!extension=\hss,
    \c!before=\blank[standard], % or nothing?
    \c!after=\blank[standard], % or nothing?
    %style=
@@ -229,12 +231,16 @@
       \box\poetry_line_box_left%
       \doifelse{\actual_alternative}{\v!line}
                {% line
-                 \doif{\poetryparameter\c!width}{local}{\hss}%
+                 %% a \hss here helps with width=local or FIXED to align lines of
+                 %% different couplings more nicely together.
+                 %% however, it interferes with an arabic style kashida (leader) between
+                 %% broken hemistiches.
+                 \poetrylineparameter{\c!separator\c!extension}%
                  \doiftextelse{\poetry_intra_line_separator}
                               {\hbox to \poetry_intra_line_distance{\poetry_intra_line_separator}}
                               {\hskip\poetry_intra_line_distance}%
                  \update_max_width{\the\dimexpr\group_width_left+\group_width+\poetry_intra_line_distance\relax}%
-                 \doif{\poetryparameter\c!width}{local}{\hss}%
+                 \poetrylineparameter{\c!separator\c!extension}%
                }%
                {% stacked or staggered
                  \update_max_width{\the\wd\poetry_line_box_left\relax}%             
